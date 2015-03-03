@@ -1,0 +1,5 @@
+#!/bin/sh
+
+##  Just an empty shell to start the actual PHP program
+
+php mrtgobot.php $*
