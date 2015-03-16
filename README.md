@@ -36,7 +36,7 @@ gives back a good suggestion for insertion into your cron jobs
 
 * allows for measuring server metrics and returnign result in MRTG compatible format
 * metrics: cpu,mem,disk,network
-* MRTG format =
+* MRTG format = Extended MRTG TXT format
     
         [I value]
     	[O value]
