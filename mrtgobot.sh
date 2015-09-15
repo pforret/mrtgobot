@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 # just a wrapper to start the php program
 DIR=$(dirname $0)
 PROG=$(basename $0 .sh)

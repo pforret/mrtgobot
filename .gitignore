@@ -1,2 +1,5 @@
 @eaDir
 cache/*
+cfg
+html
+config/mrtgobot.ini

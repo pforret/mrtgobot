@@ -1,6 +1,6 @@
 <?php
 include_once("tools.inc");
-include_once("ostools.inc");
+include_once("class_ostools.inc");
 
 Class Sensor{
 
