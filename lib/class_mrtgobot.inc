@@ -9,15 +9,9 @@ Class Mrtgobot{
 		
 		$this->filecopy=Array();
 		// copy to folder WorkDirRoot/ upon creation
-		$this->filecopy["html_root"]=Array(
-			"config/favicon.ico",
-			"config/mrtg.css",
-			"config/mrtgobot.png",
-			);
+		$this->filecopy["html_root"]=listfiles("config/global");
 		// copy to folder WorkDirRoot/cfgname/ upon creation
-		$this->filecopy["html_work"]=Array(
-			"config/favicon.ico",
-			);
+		$this->filecopy["html_work"]=listfiles("config/percfg");
 	}
 	
 	function init_ini($cfgfolder,$htmlroot){
@@ -40,8 +34,8 @@ Class Mrtgobot{
 		$vars[";; comment"]="These are the default values for creation of .cfg files";
 		$vars["WorkDirRoot"]=realpath($htmlroot);
 		$vars["PNGTitle"]="MRTGoBot";
-		$vars["PageIconURL"]="../logo.png";
-		$vars["PageCssURL"]="../mrtg.css";
+		$vars["PageIconURL"]="../mrtgobot.png";
+		$vars["PageCssURL"] ="../mrtgobot.css";
 		$vars["Interval"]=5; // default is 5 minutes
 		$vars["LegendI"]="I";
 		$vars["LegendO"]="O";
@@ -51,7 +45,15 @@ Class Mrtgobot{
 		$vars["Legend4"]="PeakO";
 		$vars["Colours"]="Orange#FF8C00,Blue#0079B2,Orange2#FFB75F,Blue2#70D1FF";
 		$vars["EnableIPv6"]="no";
+		$vars["MaxBytes"]=1000000000;
+		$vars["Options"]="growright,nobanner,nolegend,nopercent";
+		
+		$vars["prog_mrtg"]=$this->check_prog("mrtg");
+		$vars["prog_index"]=$this->check_prog("indexmaker");
+		$vars["prog_cfg"]=$this->check_prog("cfgmaker");
+		
 		progress($inifile,"configuration saved to [$this->inifile]");
+		trace($vars);
 		$this->save_ini_file($this->inifile,$vars);
 		$this->copy_if_needed($this->filecopy["html_root"],$htmlroot);
 	}
@@ -100,6 +102,7 @@ Class Mrtgobot{
 	}
 	
 	function new_cfg($name,$title=false){
+		$prog=$_SERVER["SCRIPT_FILENAME"];
 		$this->load_ini();
 		$cname=basename($name,".cfg");
 		if(!$title){
@@ -133,6 +136,7 @@ Class Mrtgobot{
 		$lines[]="PageTop[$]: <div class='navbar'><a href='./'>Overview</a></div>";
 		$ImgURL=$this->get_setting("PageIconURL");
 		$lines[]="PageTop[^]: <img src='$ImgURL' style='float: right; height: 120px' />";
+		$lines[]="AddHead[_]: <link rel='stylesheet' href='../mrtg.css' />";
 		$lines[]="LegendI[_]: " . $this->get_setting("LegendI","I");
 		$lines[]="LegendO[_]: " . $this->get_setting("LegendO","O");
 		$lines[]="Legend1[_]: " . $this->get_setting("Legend1","I");
@@ -142,9 +146,13 @@ Class Mrtgobot{
 		$lines[]="WithPeak[_]:" . $this->get_setting("WithPeak","ym");
 		$lines[]="YLegend[_]: " . $this->get_setting("YLegend","/s");
 		$lines[]="ShortLegend[_]: " . $this->get_setting("ShortLegend","/s");
-		$lines[]="Options[_]: " . $this->get_setting("Options","growright,nobanner,nolegend");
+		$lines[]="Options[_]: " . $this->get_setting("Options","growright,nobanner,nolegend,nopercent");
+		$lines[]="MaxBytes[_]: " . $this->get_setting("MaxBytes","1000000000");
 		$lines[]="";
 		$lines[]="## --- Per graph options";
+		$lines[]="# Target[example]: `$prog PROBE CPU`";
+		$lines[]="# Title[example]: Title";
+		$lines[]="# PageTop[example]: <h1>Title</h1>";
 		$lines[]="";
 		progress($cname,"save to [$fcfg]");
 		file_put_contents($fcfg,implode("\r\n",$lines));
@@ -184,7 +192,89 @@ Class Mrtgobot{
 		*/
 	}
 	
-	function load_cfg($name){
+	function indexmaker($cfgfile){
+		$this->load_ini();
+		$cfg=$this->load_cfg($cfgfile);
+		$idxprog=$this->get_setting("prog_index");
+		$folder=$cfg["common"]["WorkDir"];
+		$idxfile="$folder/index.html";
+		$params=Array();
+		$params[]="\"$idxprog\"";
+		$params[]="--nolegend";
+		$params[]="--show=day";
+		$params[]="--columns=4";
+		$params[]="--width=300";
+		if(isset($cfg["blocks"]["_"]["AddHead"])){
+			$params[]="--addhead=\"" . $cfg["blocks"]["_"]["AddHead"] . "\"";
+		}
+		if(isset($cfg["blocks"]["^"]["PageTop"])){
+			$params[]="--pagetop=\"" . $cfg["blocks"]["^"]["PageTop"] . "\"";
+		}
+		if(isset($cfg["blocks"]["_"]["Title"])){
+			$params[]="--title=\"" . $cfg["blocks"]["_"]["Title"] . "\"";
+		} else {
+			$params[]="--title=MRTGoBot";
+		}
+		$hostname=gethostname();
+		$params[]="--subtitle=\"@ $hostname\"";
+		$params[]="\"$cfgfile\"";
+		$idxline=implode("  ",$params);
+		$idxline.="> $idxfile";
+		cmdline($idxline,false,0);
+	}
+	
+	function runcfg($cfgfile){
+		$bname=basename($cfgfile,".cfg");
+		$this->load_ini();
+		$cfg=$this->load_cfg($cfgfile);
+		$mrtgprog=$this->get_setting("prog_mrtg");
+		$folder=$cfg["common"]["WorkDir"];
+		$day=date("Ymd");
+		$logfile="$folder/$bname.$day.log";
+		$params=Array();
+		$params[]="env LANG=C";
+		$params[]="\"$mrtgprog\"";
+		$params[]="\"$cfgfile\"";
+		$params[]="2>> \"$logfile\"";
+		$idxline=implode("  ",$params);
+		cmdline($idxline,false,0);
+	}
+	
+	function load_cfg($cfgfile){
+		trace(__METHOD__." - reading from file [$cfgfile]");
+		$config=Array();
+		$config["blocks"]=Array();
+		$config["common"]=Array();
+		$fp=fopen($cfgfile,"r");
+		while(!feof($fp)){
+			$line=fgets($fp,2000);
+			$line=trim(preg_replace("/#.*$/","",$line)); //trim comments
+			if(strlen($line)<1)	continue;
+			if(!contains($line,":"))	continue;
+			list($key,$val)=explode(":",$line,2);
+			$key=trim($key);
+			$val=trim($val);
+			if(contains($key,"[")){
+				list($key2,$block)=explode("[",$key);
+				$key2=trim($key2);
+				$block=trim(str_replace("]","",$block));
+				$config["blocks"][$block][$key2]=$val;
+			} else {
+				$config["common"][$key]=$val;
+			}
+		}
+		//trace($config);
+		return $config;
+	}
+	
+	function check_prog($name,$default=false){
+		if(!$default)	$default=$name;
+		$lines=cmdline("which $name");
+		if($lines){
+			return $lines[0];
+		} else {
+			return $default;
+		}
 	}
 }
 

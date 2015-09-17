@@ -1,59 +1,53 @@
 <?php
 include_once("tools.inc");
 include_once("class_ostools.inc");
+include_once("class_cache.inc");
 
 Class Sensor{
 
 	var $params=Array();
 	
-	function __construct(){
+	function __construct($type=false){
+		$c = New Cache;
 		$ss=New OStools();
 		$urlparts=Array();
-		$nameparts[]=$_SERVER['SERVER_NAME'];
-		$this->params["server"]=$_SERVER['SERVER_NAME'];
-		$key=getparam("key","cpu");
-		$nameparts[]=$key;
-		$urlparts[]="key=$key";
-		$param=getparam("param");
-		if($param){
-			$urlparts[]="param=$param";
-			$nameparts[]=basename($param);
-			}
-		$options=getparam("options");
-		if($options){
-			$urlparts[]="options=$options";
-			$nameparts[]=substr(md5($options),0,4);
-			}
-		$percent=getparam("percent");
-		if($percent){
-			$urlparts[]="percent=1";
-			$nameparts[]="p";
-			}
-		$this->params["mrtg_name"]=implode(".",$nameparts);
-		$url=($_SERVER["https"] ? "https://" : "http://" ) . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
-		$this->params["url"]=$url . "?" . implode("&",$urlparts);
-		$urlparts[]="config=1";
-		$this->params["cfgurl"]=$url . "?" . implode("&",$urlparts);
+		$hostname=gethostname();
+		$ipaddress=$c->get("ip","network");
+		if(!$ipaddress){
+			$ipaddress=gethostbyname($hostname);
+			$c->set("ip","network",$ipaddress);
+		}
+		$system=php_uname();
+		$nameparts[]=$hostname;
+		$this->params["server"]=$hostname;
 		$this->params["uptime"]=$ss->uptime();
-		$this->params["mrtg_options"]="growright,nobanner";
 		$this->params["mrtg_kmg"]=",k,M,G,T,P";
+		if(!$type)	$type="test";
+		$nameparts[]=$type;
+		$uniq=substr(sha1("$hostname.$type.$ipaddress.$system"),0,4);
+		$nameparts[]=$uniq;
+		$this->params["mrtg_name"]=implode(".",$nameparts);
+		$this->params["sys_name"]=$hostname;
+		$this->params["sys_address"]=$ipaddress;
+		$this->params["sys_details"]=$system;
 		}
 
 	function mrtg_output($params,$withconfig=false){
-		header("Content-Type: text/plain; charset=utf-8");
+		//header("Content-Type: text/plain; charset=utf-8");
 		echo trim($params["value1"]) . "\n";
 		echo trim($params["value2"]) . "\n";
 		echo trim($params["uptime"]) . "\n";
 		echo trim($params["server"]) . "\n";
 		if(!$withconfig){
-			echo $params["cfgurl"] . "\n";
+			echo $params["config"] . "\n";
 		} else {
 			$name=$params["mrtg_name"];
 			$name=str_replace("%","p",$name);
 			echo "#### MRTG CONFIG $name ####\n";
-			echo "Target[$name]: `curl -s \"$params[url]\"`\n";
-			echo "Title[$name]: $params[description]\n";
-			echo "PageTop[$name]: <h1>$params[description]</h1>\n";
+			echo "#### copy this to your .cfg MRTG config file\n";
+			echo "Target[$name]: $params[cmdline]\n";
+			echo "Title[$name]: $params[title]\n";
+			echo "PageTop[$name]: <h1>$params[title]</h1>\n";
 			echo "LegendI[$name]: $params[name1]\n";
 			echo "LegendO[$name]: $params[name2]\n";
 			echo "YLegend[$name]: $params[mrtg_unit]\n";
@@ -66,17 +60,6 @@ Class Sensor{
 	}
 
 	function cpuusage($aspercent=false){
-	
-	// Ubuntu:
-	// 22:52:42 up 9 days, 14:21,  2 users,  load average: 0.00, 0.01, 0.05
-
-	// BusyBox
-	// 22:52:54 up  3:38, load average: 2.52, 2.19, 2.01
-
-	// MacOSX  Darwin
-	// 20:57  up 9 days, 20:41, 2 users, load averages: 1.75 1.74 1.57
-
-		//$result=cmdline("uptime");
 		$ss=New OStools();
 		$result=$ss->cpuload();
 		$cpuinfo=$ss->cpuinfo();

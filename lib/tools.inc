@@ -1,16 +1,17 @@
 <?php
+include_once("class_cache.inc");
 $debug=false;
-$time_pagestarted=microtime(true);
+$time_scriptstarted=microtime(true);
 
 function trace($info,$level="DEBUG"){
 	global $debug;
-	global $time_pagestarted;
+	global $time_scriptstarted;
 	$level=strtoupper($level);
 	if(!$debug AND $level=="DEBUG"){
 		// only print info if in debug mode
 		return false;
 	}
-	$secs=round(microtime(true) - $time_pagestarted,3);
+	$secs=round(microtime(true) - $time_scriptstarted,3);
 	if(is_array($info)){
 		if(PHP_SAPI=="cli"){
 			printf("#- %s @ %06.3fs:\n",$level,$secs);
@@ -23,7 +24,6 @@ function trace($info,$level="DEBUG"){
 			echo "\n-->\n";
 		}
 	} else {
-		$info=preg_replace('#([^-])([<>])([^-])#','\1 \2 \3',$info);
 		if(PHP_SAPI=="cli"){
 			printf("#- %s @ %06.3fs: %s\n",$level,$secs,$info);
 		} else {
@@ -96,6 +96,49 @@ function preg_find($pattern,$subject){
 		trace("preg_find: $pattern not found");
 		return false;
 	}
+}
+
+function contains($haystack,$needle){
+	if(!$needle) return false;
+	$pos=strpos($haystack,$needle);
+	if($pos>0) return true; // in haystack
+	if($pos===false) return false; // not in
+	if($pos===0) return true; // starts with
+	return false; //normally never
+}
+
+
+function listfiles($folder,$ext="",$recursive=false){
+	//trace("listfiles: Reading [$ext] files from folder [$folder]");
+	if(!$folder){
+		trace("listfiles WARNING: start folder cannot be empty");
+		return false;
+	}
+	if(!file_exists($folder)){
+		trace("listfiles WARNING: folder [$folder] does not exist");
+		return false;
+	}
+	if(!is_dir($folder)){
+		trace("listfiles WARNING: [$folder] is not a folder");
+		return false;
+	}	
+	$extlen=strlen($ext);
+	$selection=Array();
+	$cfiles=scandir($folder);
+	if($cfiles){
+		foreach($cfiles as $cfile){
+			$cfull="$folder/$cfile";
+			$selected=true;
+			if(!is_file($cfull)) $selected=false;
+			if($ext AND substr($cfile,strlen($cfile)-$extlen,$extlen) <> $ext) $selected=false;
+			//trace("listfiles: [$cfull] : $selected");
+			if($selected)	$selection[]=$cfull;
+		}
+		trace("listfiles: [$ext] files in [$folder] = " . count($selection));
+	} else {
+		trace("WARNING: no files found in [$folder]");
+	}
+	return $selection;
 }
 
 ?>

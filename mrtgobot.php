@@ -3,6 +3,7 @@ include_once("lib/settings.inc");
 include_once("lib/class_mrtgobot.inc");
 $shortopts=Array(
 	"v"	=> "verbose",
+	"c"	=> "add config info (for PROBE)",
 	"f" => "force (e.g. overwrite config files)",
 	"s" => "silent (show no output)",
 	"?"	=> "help (show usage)",
@@ -21,7 +22,7 @@ $actions=Array(
 	"setup",
 	"usage",
 	);
-
+$prog=str_replace(".php",".sh",realpath($argv[0]));
 $optlist=implode("",array_keys($shortopts));
 $options = getopt($optlist);
 if(isset($options["v"]))	$debug=true;
@@ -89,10 +90,42 @@ case "new":
 	
 case "index":
 	// for each .cfg file, create an index page
+	$profile=$raw[1];
+	if(!$profile){
+		warning($action,"need [folder|file.cfg] as parameter",true);
+	}
+	if(!file_exists($profile)){
+		warning($action,"profile [$profile] cannot be found",true);
+	}
+	if(is_dir ($profile)){
+		$cfgs=listfiles($profile,".cfg");
+	} else {
+		$cfgs=Array(realpath($profile));
+	}
+	foreach($cfgs as $cfg){
+		progress("INDEX","Create index.html for [$cfg]");
+		$mg->indexmaker($cfg);
+	}
 	break;;
 	
 case "run":
 	// for each .cfg file, decide if it has to run and run it
+	$profile=$raw[1];
+	if(!$profile){
+		warning($action,"need [folder|file.cfg] as parameter",true);
+	}
+	if(!file_exists($profile)){
+		warning($action,"profile [$profile] cannot be found",true);
+	}
+	if(is_dir ($profile)){
+		$cfgs=listfiles($profile,".cfg");
+	} else {
+		$cfgs=Array(realpath($profile));
+	}
+	foreach($cfgs as $cfg){
+		progress("RUN","Run MRTG on [$cfg]");
+		$mg->runcfg($cfg);
+	}
 	break;;
 	
 case "crontab":
@@ -124,6 +157,33 @@ case "rsync":
 	break;;
 	
 case "probe":
+	$s=New Sensor;
+	if(!isset($raw[1])){
+		warning($action,"need [type] [params] as parameters",true);
+	}
+	$type=strtolower($raw[1]);
+	array_shift($raw);
+	$withconfig=isset($options["c"]);
+	switch($type){
+		case "test":
+		$params=$s->params;
+		$params["value1"]=100;
+		$params["value2"]=0;
+		$params["name1"]="always100";
+		$params["name2"]="always0";
+		$params["mrtg_maxbytes"]=100;
+		$params["cmdline"]="`$prog $action $type`";
+		$params["config"]="$prog -c $action $type";
+		$params["title"]="Probe Test";
+		$params["mrtg_unit"]="units";
+		$params["mrtg_options"]="gauge,nopercent,nolegend";
+		
+		$s->mrtg_output($params,$withconfig);
+		break;;
+	default:
+		// ?
+	}
+	
 	break;;
 	
 default:
