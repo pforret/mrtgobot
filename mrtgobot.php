@@ -199,31 +199,31 @@ function show_usage(){
 ===== MRTGoBot [ACTION] [PARAMS]
 ===== (c) 2015 - Peter Forret
 
-$prog SETUP [folder]
-	create base MRTG config and HTML folders
+$prog setup [folder]
+	create base mrtg config and html folders
 	
-$prog NEW [name]
-	create new MRTG config for a new server/topic
+$prog new [name]
+	create new mrtg config for a new server/topic
 	
-$prog INDEX [target]
+$prog index [target]
 	create index html for this/all config
 	
-$prog RUN   [target]
+$prog run   [target]
 	run this/all config .cfg 
 	
-$prog CRONTAB [target]
+$prog crontab [target]
 	copy all html files via rsync
 	
-$prog RSYNC [target]
+$prog rsync [target]
 	copy all html files via rsync
 	
-$prog PROBE [SENSOR] [OPTIONS]
-	Purpose: probe values of local system: cpu, mem, network, disk, folder size, ...
-	[SENSOR] can be [CPU|LOAD|MEM|DISK|FOLDERSIZE|FILESIZE|NETWORK], result is MRTG ready
-	Example: Target[XYZ]=`mrtgobot PROBE CPU`
+$prog probe [sensor] [options]
+	purpose: probe values of local system: cpu, mem, network, disk, folder size, ...
+	[sensor] can be [cpu|load|mem|disk|foldersize|filesize|network], result is mrtg ready
+	example: target[xyz]=`mrtgobot probe cpu`
 	
-$prog GET   [options] [url]
-	wrapper around HTTP GET: caching, error checking, timeout, ...
+$prog get   [options] [url]
+	wrapper around http get: caching, error checking, timeout, ...
 	
 ====================================
 ";

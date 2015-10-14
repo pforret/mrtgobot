@@ -20,36 +20,48 @@ h1 {
 }
 
 h2 {
+	color: #333;
+	font-size: .75em;
 }
 
 .in {
-	font-family: Lucida Console, Courier, fixed;
 	font-size: 10px;
 }
 
 .inpeak {
-	font-family: Lucida Console, Courier, fixed;
 	font-size: 10px;
 }
 
 .out {
-	font-family: Lucida Console, Courier, fixed;
 	font-size: 10px;
 }
 
 .outpeak{
-	font-family: Lucida Console, Courier, fixed;
 	font-size: 10px;
 }
 
 .git {
-	font-family: Lucida Console, Courier, fixed;
 	font-size: 10px;
 	color: #006600;
 	margin-left: 10px;
 }
 
 b a {
-	font-family: Lucida Console, Courier, fixed;
 	text-decoration:none;
+}
+
+/* for index titles */
+td div {
+	color: #333;
+	font-size: .75em;
+}
+
+div {
+	border-bottom: 1px solid #aaa;
+}
+
+
+footer {
+	border-top: 1px #AAA solid;
+	font-size: .8em;
 }
