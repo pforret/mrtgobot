@@ -6,6 +6,7 @@ REAL=$(cd $DIR; pwd)
 
 if [ -f "$REAL/$PROG.php" ] ; then
 	PARAMS=""
+	cd $REAL
 	while [ -n "$1" ] ; do
 		WORD=$1
 		if [ "${WORD}" == "${WORD// /}" ] ; then

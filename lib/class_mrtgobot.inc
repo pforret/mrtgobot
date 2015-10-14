@@ -202,8 +202,8 @@ Class Mrtgobot{
 		$params[]="\"$idxprog\"";
 		$params[]="--nolegend";
 		$params[]="--show=day";
-		$params[]="--columns=4";
-		$params[]="--width=300";
+		$params[]="--columns=3";
+		$params[]="--width=330";
 		if(isset($cfg["blocks"]["_"]["AddHead"])){
 			$params[]="--addhead=\"" . $cfg["blocks"]["_"]["AddHead"] . "\"";
 		}

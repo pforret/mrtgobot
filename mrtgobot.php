@@ -202,6 +202,9 @@ function show_usage(){
 $prog SETUP [folder]
 	create base MRTG config and HTML folders
 	
+$prog NEW [name]
+	create new MRTG config for a new server/topic
+	
 $prog INDEX [target]
 	create index html for this/all config
 	
