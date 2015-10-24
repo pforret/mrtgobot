@@ -97,15 +97,7 @@ case "index":
 	if(!file_exists($profile)){
 		warning($action,"profile [$profile] cannot be found",true);
 	}
-	if(is_dir ($profile)){
-		$cfgs=listfiles($profile,".cfg");
-	} else {
-		$cfgs=Array(realpath($profile));
-	}
-	foreach($cfgs as $cfg){
-		progress("INDEX","Create index.html for [$cfg]");
-		$mg->indexmaker($cfg);
-	}
+	$mg->indexmaker($profile);
 	break;;
 	
 case "run":
@@ -117,15 +109,7 @@ case "run":
 	if(!file_exists($profile)){
 		warning($action,"profile [$profile] cannot be found",true);
 	}
-	if(is_dir ($profile)){
-		$cfgs=listfiles($profile,".cfg");
-	} else {
-		$cfgs=Array(realpath($profile));
-	}
-	foreach($cfgs as $cfg){
-		progress("RUN","Run MRTG on [$cfg]");
-		$mg->runcfg($cfg);
-	}
+	$mg->runcfg($profile);
 	break;;
 	
 case "crontab":
