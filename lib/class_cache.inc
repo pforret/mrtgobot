@@ -6,7 +6,7 @@ Class Cache {
 	function __construct($cachedir="cache"){
 		if(!file_exists("$cachedir/.")){
 			if(mkdir($cachedir,0777,true)){
-				trace("created cache dir [$cachedir]");
+				//trace("created cache dir [$cachedir]");
 				$this->enabled=true;
 				$this->cachedir=$cachedir;
 				return true;
@@ -29,13 +29,13 @@ Class Cache {
 		}
 		$cachefile=$this->mkfilename($id,$group);
 		if(!file_exists($cachefile)){
-			trace("Cache::get : no cache [$cachefile] yet");
+			//trace("Cache::get : no cache [$cachefile] yet");
 			return false;
 		}
 		// so the cache file exists
 		$age_secs=(time()-filemtime($cachefile));
 		if( $age_secs > $maxsecs){
-			trace("Cache::get : cache [$cachefile] too old - $age_secs > $maxsecs");
+			//trace("Cache::get : cache [$cachefile] too old - $age_secs > $maxsecs");
 			return false;
 		}
 		trace("Cache::get : cache [$cachefile] OK - $age_secs <= $maxsecs");
@@ -54,7 +54,7 @@ Class Cache {
 		// so the cache file exists
 		$age_secs=(time()-filemtime($cachefile));
 		if( $age_secs > $maxsecs){
-			trace("Cache::get_arr : cache [$cachefile] too old - $age_secs > $maxsecs");
+			//trace("Cache::get_arr : cache [$cachefile] too old - $age_secs > $maxsecs");
 			return false;
 		}
 		trace("Cache::get_arr : cache [$cachefile] OK - $age_secs <= $maxsecs");
@@ -69,7 +69,7 @@ Class Cache {
 			$this->cleanup();
 		}
 		$cachefile=$this->mkfilename($id,$group);
-		trace("Cache::set : saving [$cachefile]");
+		//trace("Cache::set : saving [$cachefile]");
 		file_put_contents($cachefile,$value);
 		return true;
 	}
@@ -82,7 +82,7 @@ Class Cache {
 			$this->cleanup();
 		}
 		$cachefile=$this->mkfilename($id,$group);
-		trace("Cache::set_arr : saving [$cachefile]");
+		//trace("Cache::set_arr : saving [$cachefile]");
 		file_put_contents($cachefile,serialize($array));
 		return true;
 	}
@@ -116,7 +116,7 @@ Class Cache {
 		$begin=preg_replace("#[^a-zA-Z0-9]*#","",$id);
 		$begin=substr($begin,0,10);
 		$cacheid="$group.$begin." . substr(sha1($id),0,16);
-		$cachefile=$this->cachedir . "/$cacheid.temp";
+		$cachefile=$this->cachedir . "/$cacheid.tmp";
 		return $cachefile;
 	}
 }

@@ -6,9 +6,11 @@ include_once("class_cache.inc");
 Class Sensor{
 
 	var $params=Array();
+	var	$fparts=Array();
+	var	$sparts=Array();
 	
 	function __construct($type=false){
-		$c = New Cache;
+		$c =New Cache;
 		$ss=New OStools();
 		$urlparts=Array();
 		$hostname=gethostname();
@@ -18,22 +20,43 @@ Class Sensor{
 			$c->set("ip","network",$ipaddress);
 		}
 		$system=php_uname();
-		$nameparts[]=$hostname;
+		$this->add_namepart($hostname);
 		$this->params["server"]=$hostname;
 		$this->params["uptime"]=$ss->uptime();
 		$this->params["mrtg_kmg"]=",k,M,G,T,P";
 		if(!$type)	$type="test";
-		$nameparts[]=$type;
-		$uniq=substr(sha1("$hostname.$type.$ipaddress.$system"),0,4);
-		$nameparts[]=$uniq;
-		$this->params["mrtg_name"]=implode(".",$nameparts);
+		$this->add_namepart($type);
 		$this->params["sys_name"]=$hostname;
 		$this->params["sys_address"]=$ipaddress;
 		$this->params["sys_details"]=$system;
 		}
 
+	function add_namepart($text){
+		$this->fparts[]=$text;
+		$this->sparts[]=substr(preg_replace("#([^\w\d])#","",$text),0,8);
+		$fname=implode(" ",$this->fparts);
+		$sname=implode("_",$this->sparts);
+		$uniq=substr(sha1($fname),0,3);
+		$this->params["mrtg_name"]="$sname.$uniq";
+		trace("name is now [$sname.$uniq]");
+	}
+	function set_uptime($text){
+		$this->params["uptime"]=$text;
+	}
+	
+	function set_server($text){
+		$this->params["server"]=$text;
+	}
 	function mrtg_output($params,$withconfig=false){
 		//header("Content-Type: text/plain; charset=utf-8");
+		trace("--- mrtg_output start");
+		if(!isset($params["uptime"])){
+			$params["uptime"]=$this->params["uptime"];
+		}
+		if(!isset($params["mrtg_name"])){
+			$params["mrtg_name"]=$this->params["mrtg_name"];
+		}
+		trace($params);
 		echo trim($params["value1"]) . "\n";
 		echo trim($params["value2"]) . "\n";
 		echo trim($params["uptime"]) . "\n";
@@ -55,38 +78,43 @@ Class Sensor{
 			echo "ShortLegend[$name]: $params[mrtg_unit]\n";
 			echo "Options[$name]: $params[mrtg_options]\n";
 			echo "MaxBytes[$name]: $params[mrtg_maxbytes]\n";
-			echo "kMG[$name]: $params[mrtg_kmg]\n";
+			if(isset($params["mrtg_kmg"])){
+				echo "kMG[$name]: $params[mrtg_kmg]\n";	
+			}
 		}
 	}
 
-	function cpuusage($aspercent=false){
+	function cpuusage($aspercent=true){
 		$ss=New OStools();
-		$result=$ss->cpuload();
+		$result=$ss->cpuload($aspercent);
 		$cpuinfo=$ss->cpuinfo();
 		if($result){
-			$load1=$result["1min"];
-			$load5=$result["5min"];
-			$load15=$result["15min"];
-			$this->params["server"]="$cpuinfo[cores] core(s) x $cpuinfo[ghz] GHz (bogomips $cpuinfo[bogomips])";
+			$load1=$result["cpu_1min"];
+			$load5=$result["cpu_5min"];
+			$load15=$result["cpu_15min"];
+			$nbcpu=$cpuinfo["cpu_cores"];
+			$this->params["server"]="$nbcpu core(s) x $cpuinfo[cpu_ghz] GHz (bogomips $cpuinfo[bogomips])";
 			if(!$aspercent){
-				$this->params["value1"]=$load5*100;
-				$this->params["value2"]=$load15*100;
+				$this->params["value1"]=$load5;
+				$this->params["value2"]=$load15;
 				$this->params["name1"]="Avg load over 5 min";
 				$this->params["name2"]="Avg load over 15 min";
 				$this->params["description"]="CPU load (5/15 min - $nbcpu CPUs)";
 				$this->params["mrtg_unit"]="load";
 				$this->params["mrtg_options"].=",gauge";
 				$this->params["mrtg_maxbytes"]="10000";
+				$this->params["title"]="CPU " . $cpuinfo["netw_host"];
 			} else {
-				$nbcpu=$ss->cpucount();
-				$this->params["value1"]=round($load5*100/$nbcpu,2);
-				$this->params["value2"]=round($load15*100/$nbcpu,2);
+				$this->add_namepart("p");
+				$this->params["value1"]=$load5;
+				$this->params["value2"]=$load15;
 				$this->params["name1"]="% used - 5 min";
 				$this->params["name2"]="% used - 15 min";
 				$this->params["description"]="CPU usage % (5/15 min - $nbcpu CPUs)";
 				$this->params["mrtg_unit"]="%";
 				$this->params["mrtg_options"].=",gauge,nopercent";
-				$this->params["mrtg_maxbytes"]="1000";
+				$this->params["mrtg_maxbytes"]="100";
+				$this->params["title"]="CPU% " . $cpuinfo["netw_host"];
 			}
 			return $this->params;
 		} else {
@@ -101,186 +129,67 @@ Class Sensor{
 	//   Mem:       249184       214376        34808            0        47724
 	//  Swap:      2097144       188224      1908920
 	// Total:      2346328       402600      1943728
-		$result=cmdline("free | grep Mem");
-		if($result[0]){
-			$line=trim($result[0]);
-			$line=preg_replace("#\s\s*#","\t",$line);
-			list($mem,$total,$used,$free,$percent,$shared,$buffers)=explode("\t",$line);
-			if(!$aspercent){
-				$this->params["value1"]=$used;
-				$this->params["value2"]=$total;
-				$this->params["name1"]="Used RAM";
-				$this->params["name2"]="Total RAM";
-				$this->params["description"]="Memory usage (used/total)";
-				$this->params["mrtg_unit"]="B";
-				$this->params["mrtg_options"].=",gauge";
-				$this->params["mrtg_maxbytes"]=$total;
-				$this->params["mrtg_kmg"]="k,M,G,T,P";
-			} else {
-				$this->params["value1"]=round($used*100/$total,2);
-				$this->params["value2"]=100;
-				$this->params["name1"]="% RAM used";
-				$this->params["name2"]="100%";
-				$this->params["description"]="Memory usage (%)";
-				$this->params["mrtg_unit"]="%";
-				$this->params["mrtg_options"].=",gauge,nopercent";
-				$this->params["mrtg_maxbytes"]=100;
-			}
-			return $this->params;
-		} else {
-			return false;
-		}
-	}
-
-	function battery($type=""){
-		/*
-		Array
-		(
-		    [battery_mamp] =>  319
-		    [battery_capacity] =>  6214
-		    [battery_charge] =>  6151
-		    [battery_charge_%] => 0.99
-		    [battery_cycles] =>  22
-		    [battery_health] =>  Normal
-		    [battery_present] => 1
-		    [battery_mvolt] => 12880
-		    [charger_busy] => 1
-		    [charger_done] => 0
-		    [charger_present] => 1
-		    [charger_watt] =>  85
-		)
-		*/
 		$ss=New OStools();
-		$result=$ss->battery();
-		if($result){
-			$line=trim($result[0]);
-			$line=preg_replace("#\s\s*#","\t",$line);
-			trace("battery: get data of type [$type]");
-			switch($type){
-				case "-":
-					$this->params["value1"]=$result["battery_capacity"]-$result["battery_charge"];
-					$this->params["value2"]=$result["battery_capacity"];
-					$this->params["name1"]="Battery consumed Ah";
-					$this->params["name2"]="Battery maximum Ah";
-					$this->params["description"]="Battery charge";
-					$this->params["mrtg_unit"]="Ah";
-					$this->params["mrtg_options"].=",gauge";
-					$this->params["mrtg_maxbytes"]=$this->params["value2"];
-					$this->params["mrtg_kmg"]=",k,M,G,T,P";
-					break;;
-
-				case "%":
-					$this->params["value1"]=$result["battery_charge_%"];
-					$this->params["value2"]=$result["charger_busy"]*100;
-					$this->params["name1"]="Battery charge %";
-					$this->params["name2"]="Charger active";
-					$this->params["description"]="Battery charge %";
-					$this->params["mrtg_unit"]="%";
-					$this->params["mrtg_options"].=",gauge";
-					$this->params["mrtg_maxbytes"]=2;
-					break;;
-
-				case "V":
-					$this->params["value1"]=$result["battery_mvolt"];
-					$this->params["value2"]="";
-					$this->params["name1"]="Battery voltage";
-					$this->params["name2"]="";
-					$this->params["description"]="Battery voltage";
-					$this->params["mrtg_unit"]="V";
-					$this->params["mrtg_options"].=",gauge,noo";
-					$this->params["mrtg_maxbytes"]=15000;
-					$this->params["mrtg_kmg"]="m,,k,M,G,T";
-				break;;
-
-				case "A":
-					$this->params["value1"]=$result["battery_mamp"];
-					$this->params["value2"]="";
-					$this->params["name1"]="Battery ampere";
-					$this->params["name2"]="";
-					$this->params["description"]="Battery ampere";
-					$this->params["mrtg_unit"]="V";
-					$this->params["mrtg_options"].=",gauge,noo";
-					$this->params["mrtg_maxbytes"]=15000;
-					$this->params["mrtg_kmg"]=",k,M,G,T,P";
-				break;;
-
-				case "C":
-					$this->params["value1"]=$result["battery_cycles"];
-					$this->params["value2"]="";
-					$this->params["name1"]="Battery cycles";
-					$this->params["name2"]="";
-					$this->params["description"]="Battery cycles";
-					$this->params["mrtg_unit"]="#";
-					$this->params["mrtg_options"].=",gauge,noo";
-					$this->params["mrtg_maxbytes"]=15000;
-					$this->params["mrtg_kmg"]="m,,k,M,G,T";
-				break;;
-
-				default:
-					$this->params["value1"]=$result["battery_charge"];
-					$this->params["value2"]=$result["battery_capacity"];
-					$this->params["name1"]="Battery available Ah";
-					$this->params["name2"]="Battery maximum Ah";
-					$this->params["description"]="Battery charge";
-					$this->params["mrtg_unit"]="Ah";
-					$this->params["mrtg_options"].=",gauge";
-					$this->params["mrtg_maxbytes"]=$this->params["value2"];
-					$this->params["mrtg_kmg"]=",k,M,G,T,P";
-
-			}
-			$this->params["uptime"]="Health: $result[battery_health] after $result[battery_cycles] charging cycles";
-			if(!$aspercent){
-				if(!$inverse){
-				} else {
-				}
-			} else {
-			}
-			return $this->params;
+		$result=$ss->memload($aspercent);
+		$cpuinfo=$ss->cpuinfo();
+		if(!$aspercent){
+			$this->params["value1"]=$result["mem_used"];
+			$this->params["value2"]=$result["mem_total"];
+			$this->params["name1"]="Used RAM";
+			$this->params["name2"]="Total RAM";
+			$this->params["description"]="Memory usage (used/total)";
+			$this->params["mrtg_unit"]="B";
+			$this->params["mrtg_options"].=",gauge";
+			$this->params["mrtg_maxbytes"]=$total;
+			$this->params["title"]="Memory " . $cpuinfo["netw_host"];
 		} else {
-			return false;
+			$this->add_namepart("p");
+			$this->params["value1"]=round($result["mem_used"]*100/$result["mem_total"]);
+			$this->params["value2"]=100;
+			$this->params["name1"]="% RAM used";
+			$this->params["name2"]="100%";
+			$this->params["description"]="Memory usage (%)";
+			$this->params["mrtg_unit"]="%";
+			$this->params["mrtg_options"].=",gauge,nopercent";
+			$this->params["mrtg_maxbytes"]=100;
+			$this->params["title"]="Memory% " . $cpuinfo["netw_host"];
 		}
+		return $this->params;
 	}
 
 	function diskusage($path=false,$aspercent=false){
-	// >df
-	// Filesystem           1K-blocks      Used Available Use% Mounted on
-	// /dev/sda3            1918213808  80720900 1837390508   4% /volume1
 		if(!$path)	$path=".";
 		if(!file_exists($path)){
 			trace("diskusage: cannot find [$path]");
 			//return false;
 		}
-		$result=cmdline("df -m $path");
-		// better use df -m because some path names can be so long they leave no space between name and #blocks
-		trace($result);
-		if($result[1]){
-			$line=$result[1];
-			$line=preg_replace("#\s\s*#","\t",$line);
-			list($disk,$blocks,$used,$available,$percent,$mounted)=explode("\t",$line);
-			if(!$aspercent){
-				$this->params["value1"]=$used*1024;
-				$this->params["value2"]=$blocks*1024;
-				$this->params["name1"]="Used disk space";
-				$this->params["name2"]="Total disk space";
-				$this->params["description"]="Disk Usage (used/total) [$disk]";
-				$this->params["mrtg_unit"]="B";
-				$this->params["mrtg_options"].=",gauge";
-				$this->params["mrtg_maxbytes"]=$blocks;
-				$this->params["mrtg_kmg"]="k,M,G,T,P";
-			} else {
-				$this->params["value1"]=round($used*100/$blocks,2);
-				$this->params["value2"]=100;
-				$this->params["name1"]="Used disk %";
-				$this->params["name2"]="100%";
-				$this->params["description"]="Disk Usage (%) [$disk]";
-				$this->params["mrtg_unit"]="%";
-				$this->params["mrtg_options"].=",gauge";
-				$this->params["mrtg_maxbytes"]=100;
-			}
-			return $this->params;
+		$ss=New OStools();
+		$result=$ss->diskfree($path);
+		$cpuinfo=$ss->cpuinfo();
+		$this->add_namepart($result["disk_drive"]);
+
+		if(!$aspercent){
+			$this->params["value1"]=$result["disk_used"];
+			$this->params["value2"]=$result["disk_total"];
+			$this->params["name1"]="Used on " . $result["disk_name"];
+			$this->params["name2"]="Total on " . $result["disk_name"];
+			$this->params["description"]="DISK: " . $result["disk_name"];
+			$this->params["title"]="DISK: " . $result["disk_name"];
+			$this->params["mrtg_unit"]="B";
+			$this->params["mrtg_options"].=",gauge";
+			$this->params["mrtg_maxbytes"]=$result["disk_total"];
 		} else {
-			return false;
+			$this->params["value1"]=round($result["disk_used"]/$result["disk_total"]);
+			$this->params["value2"]=100;
+			$this->params["name1"]="Used disk %";
+			$this->params["name2"]="100%";
+			$this->params["description"]="DISK%: " . $result["disk_name"];
+			$this->params["title"]="DISK%: " . $result["disk_name"];
+			$this->params["mrtg_unit"]="%";
+			$this->params["mrtg_options"].=",gauge";
+			$this->params["mrtg_maxbytes"]=100;
 		}
+		return $this->params;
 	}
 
 	function foldersize($folder,$options){
@@ -388,6 +297,7 @@ Class Sensor{
 	function pingtime($address,$port=80){
 		if(!$address)	return false;
 		for($i=0;$i<4;$i++){
+			// result in seconds
 			$result[$i]=$this->tcpping($address,$port);
 		}
                 if($result){
@@ -395,14 +305,14 @@ Class Sensor{
 			$desc="ping time to $address:$port";
 			$min=min($result);
 			$max=max($result);
-                        $this->params["value1"]=(int)$min;
-                        $this->params["value2"]=(int)$max;
+                        $this->params["value1"]=(int)($min*1000000);
+                        $this->params["value2"]=(int)($max*1000000);
                         $this->params["name1"]="MIN $desc";
                         $this->params["name2"]="MAX $desc";
                         $this->params["description"]=$desc;
                         $this->params["mrtg_unit"]="sec";
                         $this->params["mrtg_options"].=",gauge,nopercent";
-                        $this->params["mrtg_maxbytes"]=1000000000;
+                        $this->params["mrtg_maxbytes"]=4000000;
                         $this->params["mrtg_kmg"]="u,m,,k,M,G";
                         return $this->params;
                 } else {
@@ -476,17 +386,22 @@ Class Sensor{
 		return $result;
 	}
 	
-	function tcpping($ip,$port){
+	function tcpping($host,$port=80){
 		$timeout=4;
+		if(contains($host,":")){
+			list($host,$port)=explode(":",$host);
+			$port=(int)$port;
+		}
+		if(!$port) 	return 5555;
 		$t1 = microtime(true); 
-		$fP = fSockOpen($ip, $port, $errno, $errstr, $timeout); 
+		$fP = fSockOpen($host, $port, $errno, $errstr, $timeout); 
 		if (!$fP) { 
-			trace("tcpping: cannot connect to $ip:$port - $errstr");
+			trace("tcpping: cannot connect to $host:$port - $errstr");
 			return 6666; 
 			}
 		$t2 = microtime(true); 
-		//trace("[$ip:$port] - $t1 - $t2");
-		return round((($t2 - $t1) * 1000000)); 
+		trace("TCP PING [$host:$port] - in " . round(($t2 - $t1)*1000) . "msec");
+		return ($t2 - $t1); 
 	}
 }
 

@@ -274,7 +274,7 @@ Class Mrtgobot{
 		}
 	}
 	
-	function runcfg($profile){
+	function runcfg($profile,$bg=false){
 		$t_start=microtime(true);
 		if(is_dir ($profile)){
 			$cfgs=listfiles($profile,".cfg");

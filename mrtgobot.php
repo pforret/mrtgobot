@@ -1,8 +1,10 @@
 <?php
 include_once("lib/settings.inc");
 include_once("lib/class_mrtgobot.inc");
+include_once("lib/class_ostools.inc");
 $shortopts=Array(
 	"v"	=> "verbose",
+	"b"	=> "background (run/index all CFGs simultaneously)",
 	"c"	=> "add config info (for PROBE)",
 	"f" => "force (e.g. overwrite config files)",
 	"s" => "silent (show no output)",
@@ -138,10 +140,11 @@ case "crontab":
 	break;;
 	
 case "rsync":
+	trace("run [rsync]");
 	break;;
 	
 case "probe":
-	$s=New Sensor;
+	trace("run [probe]");
 	if(!isset($raw[1])){
 		warning($action,"need [type] [params] as parameters",true);
 	}
@@ -149,7 +152,8 @@ case "probe":
 	array_shift($raw);
 	$withconfig=isset($options["c"]);
 	switch($type){
-		case "test":
+	case "test":
+		$s=New Sensor("test");
 		$params=$s->params;
 		$params["value1"]=100;
 		$params["value2"]=0;
@@ -164,8 +168,31 @@ case "probe":
 		
 		$s->mrtg_output($params,$withconfig);
 		break;;
+	case "cpu":
+		$s=New Sensor("cpu");
+		$params=$s->cpuusage(true);
+		$s->mrtg_output($params,$withconfig);
+		break;;
+	case "mem":
+		$s=New Sensor("mem");
+		$params=$s->memusage(true);
+		$s->mrtg_output($params,$withconfig);
+		break;;
+	case "disk":
+		$s=New Sensor("disk");
+		$params=$s->diskusage($raw[1]);
+		$s->mrtg_output($params,$withconfig);
+		break;;
+	case "ping":
+		$s=New Sensor("ping");
+		$params=$s->pingtime($raw[1]);
+		$s->mrtg_output($params,$withconfig);
+		break;;
 	default:
-		// ?
+		$s=New Sensor("error");
+		$params["value1"]="probe [$type] not yet supported";
+		$params["value2"]="probe [$type] not yet supported";
+		$s->mrtg_output($params,$withconfig);
 	}
 	
 	break;;

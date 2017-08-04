@@ -9,9 +9,19 @@ Class OStools {
 		$this->version=php_uname("v");
 		$this->host=gethostname();
 		//print_r($this);
+		$this->info["OS"]=PHP_OS;
+		$this->info["uname"]=php_uname("s");
+		$this->info["OS_version"]=php_uname("v");
+		$this->info["netw_host"]=gethostname();
+		$this->info["netw_ip"]=gethostbyname(gethostname());
+		$this->uptime();
+		trace($this->info);
 	}
 
-	function cpuload(){
+	function cpuload($aspercent=true){
+		$this->info["cpu_1min"]=0;
+		$this->info["cpu_5min"]=0;
+		$this->info["cpu_15min"]=0;
 		switch($this->os){
 		case "WINNT":
 			trace("OSSensor::cpuload : Windows method - Win32_Processor");
@@ -26,68 +36,65 @@ Class OStools {
                 $load_min=min($load_min,$cpu->loadpercentage);
             }
             $load = round($load_total/$cpu_num);
-   			$result=Array(
-				"OS"	=> $this->os,
-				"1min"  => round($load,3),
-				"5min"  => round(($load+$load_min)/2,3), // not really the same as load over 5min , but yeah, we can't have that
-				"15min" => round(($load+2*$load_min)/3,3), // not really the same as load over 15min , but yeah, we can't have that
-				);
+			$this->info["cpu_load"]=round($load,3);
+			$this->info["cpu_1min"]=round($load,3);
+			$this->info["cpu_5min"]=round(($load+$load_min)/2,3);
+			$this->info["cpu_15min"]=round(($load+2*$load_min)/3,3);
 			break;;
-		case "Darwin":
 		case "Linux":
+			if($aspercent){
+				$secs=2;
+				$lines=cmdline("(cat /proc/stat ; sleep $secs ; cat /proc/stat) | awk '/cpu / {print $2+$3+$4+$7+$8+$9, $5,$6}'");
+				trace($lines);
+				/*
+				[0] => 654149 379971 38391
+				[1] => 654354 379971 38391
+				*/
+				list($busy1,$idle1,$wait1)=explode(" ",$lines[0]);
+				list($busy2,$idle2,$wait2)=explode(" ",$lines[1]);
+				$dbusy=$busy2-$busy1;
+				$didle=$idle2+$wait2-$idle1-$wait1;
+				$dtotal=$dbusy+$didle;
+				trace("busy: $dbusy; idle=$didle");
+				$this->info["cpu_load"]=round(100*$dbusy/$dtotal);
+				$this->info["cpu_1min"]=round(100*$dbusy/$dtotal);
+				$this->info["cpu_5min"]=round(100*$dbusy/$dtotal);
+				$this->info["cpu_15min"]=round(100*$dbusy/$dtotal);
+			} else {
+				$load=sys_getloadavg();
+				$this->info["cpu_load"]=round($load[0],3);
+				$this->info["cpu_1min"]=round($load[0],3);
+				$this->info["cpu_5min"]=round($load[1],3);
+				$this->info["cpu_15min"]=round($load[2],3);
+			}
+			break;;
+			
+		case "Darwin":
 			trace("OSSensor::cpuload : Linux/MacOSX method - sys_getloadavg");
 			$load=sys_getloadavg();
-			$result=Array(
-				"OS"	=> $this->os,
-				"1min"  => round($load[0],3),
-				"5min"  => round($load[1],3),
-				"15min" => round($load[2],3),
-				);
+			$this->info["cpu_load"]=round($load[0],3);
+			$this->info["cpu_1min"]=round($load[0],3);
+			$this->info["cpu_5min"]=round($load[1],3);
+			$this->info["cpu_15min"]=round($load[2],3);
 			break;;
 		default:
-			$result=Array(
-				"OS"	=> $this->os,
-				"1min"  => 0,
-				"5min"  => 0,
-				"15min" => 0,
-				);
+			// nothing to do
 		}
 		trace("OSSensor::cpuload : load is " . $result["1min"]);
-		return $result;
-	}
-
-	function cpucount(){
-		$numCpus = 1;
-
-		switch(true){
-		case is_file('/proc/cpuinfo'):
-			// Linux machines
-			trace("OSSensor::cpucount : Linux method: /proc/cpuinfo");
-			$cpuinfo = file_get_contents('/proc/cpuinfo');
-			preg_match_all('/^processor/m', $cpuinfo, $matches);
-			$numCpus = count($matches[0]);
-			break;;
-		case $this->os=="WINNT":
-			// Windows machines
-			trace("OSSensor::cpucount : Windows method: wmic");
-			$numCpus=$this->wmic("cpu get NumberOfCores","int");
-			break;;
-		default:
-			trace("OSSensor::cpucount : MacOSX method: sysctl");
-			$numCpus=$this->sysctl("hw.ncpu","int");
-		}
-		trace("OSSensor::cpucount : $numCpus CPUs detected");
-		return $numCpus;
+		trace($this->info);
+		return $this->info;
 	}
 
 	function cpuinfo(){
+		$this->info["cpu_cores"]=1;
+		$this->info["cpu_mhz"]=1000;
+		$this->info["cpu_ghz"]=1;
+		$this->info["bogomips"]=1000;
+		$this->info["cpu_hardware"]="Unknown";
+		$this->info["cpu_type"]="Unknown";
+		$this->info["cpu_procs"]=0;
 		$numCpus = 1;
 
-		$cpuinfo=Array(
-			"bogomips" => 1000,
-			"cores" => 1,
-			"ghz" => 1,
-			);
 		switch(true){
 		case is_file('/proc/cpuinfo'):
 			// Linux machines
@@ -96,44 +103,131 @@ Class OStools {
 			Single Core ARM:
 			Processor name  : Feroceon 88F6282 rev 1 (v5l) @ 1.6 GHz
 			BogoMIPS        : 1589.24
+			Processor       : Feroceon 88FR131 rev 1 (v5l)
+			BogoMIPS        : 1589.24
+			Features        : swp half thumb fastmult edsp
+			Hardware        : Synology 6282 board
 			
 			Dual Core Intel:
 			vendor_id       : GenuineIntel
-			cpu family      : 6
 			model name      : Intel(R) Celeron(R) CPU  J1800  @ 2.41GHz
 			cpu MHz         : 2408.000
 			cpu cores       : 2
 			bogomips        : 4833.43
 			*/
-			$cpulines = file_get_contents('/proc/cpuinfo');
-			trace($cpulines);
 			
-			$bogomips=$this->grepinfo("BogoMIPS",1000);			
-			$numcores=$this->grepinfo("cpu cores",1);
-			$cpughz=$this->grepinfo("cpu MHz",$bogomips/$numcores);
-			$cpughz=round($cpughz/1000,1);
-			
-			$cpuinfo["bogomips"]=$bogomips;
-			$cpuinfo["ghz"]=$cpughz;
-			$cpuinfo["cores"]=$numcores;
+			$this->info["bogomips"]=25*round($this->grepinfo("BogoMIPS",$this->info["bogomips"])/25);
+			$this->info["cpu_cores"]=$this->grepinfo("cpu cores",$this->info["cpu_cores"]);
+			$defmhz=$this->info["bogomips"]/$this->info["cpu_cores"];
+			$this->info["cpu_mhz"]=$this->grepinfo("cpu MHz",$defmhz);
+			$this->info["cpu_ghz"]=round($this->info["cpu_mhz"]/1000,1);
+			$this->info["cpu_hardware"]=$this->grepinfo("Hardware","Unknown");
+			$this->info["cpu_type"]=$this->grepinfo("model name");
+			if(!$this->info["cpu_type"]){
+				$this->info["cpu_type"]=$this->grepinfo("Processor","Unknown");
+			}
+			$nbproc=cmdline("ps -A --no-headers | wc -l");
+			trace($nbproc);
+			if($nbproc){
+				$this->info["cpu_procs"]=(int)trim($nbproc[0]);		
+			}
 			break;;
 		case $this->os=="WINNT":
 			// Windows machines
 			trace("OSSensor::cpuinfo : Windows method: wmic");
-			$cpuinfo["cores"]=$this->wmic("cpu get NumberOfCores","int");
-			$cpuinfo["ghz"]=round($this->wmic("cpu get MaxClockSpeed","int")/1000,1);
-			$cpuinfo["bogomips"]=$cpuinfo["cpu cores"] * $cpuinfo["cpu ghz"];
+			// COMPUTERSYSTEM get Manufacturer = Dell Inc.
+			// COMPUTERSYSTEM get Model        = OptiPlex 9010
+			// cpu get MaxClockSpeed = 3401
+			// cpu get Description = Intel64 Family 6 Model 58 Stepping 9
+			// cpu get Name        = Intel(R) Core(TM) i7-3770 CPU @ 3.40GHz
+			$this->info["cpu_cores"]=$this->wmic("cpu get NumberOfCores","int");
+			$this->info["cpu_mhz"]=$this->wmic("cpu get MaxClockSpeed","int");
+			$this->info["cpu_ghz"]=round($this->wmic("cpu get MaxClockSpeed","int")/1000,1);
+			$this->info["bogomips"]=$this->info["cpu_cores"] * $this->info["cpu_mhz"];
+			$this->info["cpu_hardware"]=$this->wmic("cpu get Description");
+			$this->info["cpu_type"]=$this->wmic("cpu get Name");
+			$procs=cmdline("tasklist");
+			if($procs){
+				$this->info["cpu_procs"]=count($procs);		
+			}
 			break;;
 		default:
 			trace("OSSensor::cpuinfo : MacOSX method: sysctl");
-			$cpuinfo["cores"]=$this->sysctl("hw.ncpu");
-			$cpuinfo["ghz"]=round($this->sysctl("hw.cpufrequency")/1000000000,1);
-			$cpuinfo["bogomips"]=$cpuinfo["cpu cores"] * $cpuinfo["cpu ghz"];
+			$this->info["cpu_cores"]=$this->sysctl("hw.ncpu");
+			$this->info["cpu_mhz"]=round($this->sysctl("hw.cpufrequency")/1000000,1);
+			$this->info["cpu_ghz"]=round($this->sysctl("hw.cpufrequency")/1000000000,1);
+			$this->info["bogomips"]=$this->info["cpu_cores"] * $this->info["cpu_ghz"];
+			$nbproc=cmdline("ps -A --no-headers | wc -l");
+			if($nbproc){
+				$this->info["cpu_procs"]=$nbproc[0];		
+			}
 		}
-		trace($cpuinfo);
-		return $cpuinfo;
+		trace($this->info);
+		return $this->info;
 	}
 
+	function memload(){
+		$this->info["mem_used"]=0;
+		$this->info["mem_total"]=0;
+		$this->info["mem_free"]=0;
+		$this->info["mem_php"]=memory_get_usage();
+		switch($this->os){
+		case "WINNT":
+			$this->info["mem_total"]=$this->wmic("ComputerSystem get TotalPhysicalMemory","int");
+			$this->info["mem_free"]=$this->wmic("OS get FreePhysicalMemory","int");
+			$this->info["mem_used"]=$this->info["mem_total"]-$this->info["mem_free"];
+			break;;
+		case "Linux":
+		case "Darwin":
+			$result=cmdline("free -b | grep Mem");
+			if($result[0]){
+				$line=trim($result[0]);
+				$line=preg_replace("#\s\s*#","\t",$line);
+				list($mem,$total,$used,$free,$rest)=explode("\t",$line,5);
+				$this->info["mem_used"]=$used;
+				$this->info["mem_total"]=$total;
+				$this->info["mem_free"]=$free;
+			}
+			break;;
+		default:
+		}
+		return $this->info;
+	}
+	
+	function diskfree($path){
+		$this->info["disk_total"]=disk_total_space($path);
+		$this->info["disk_free"]=disk_free_space($path);
+		$this->info["disk_used"]=$this->info["disk_total"]-$this->info["disk_free"];
+		$this->info["disk_name"]="Unknown";
+		switch($this->os){
+		case "WINNT":
+			$output=cmdline("dir \"$path\"");
+			if($output){
+				// Volume in drive D is DATAPART1
+				$line1=trim($output[0]);
+				$drive=preg_find("/drive (\w)/",$line1);
+				$dname=preg_find("/([^\s\t]*)$/",$line1);
+				$this->info["disk_name"]="$drive: [$dname]";
+				$this->info["disk_drive"]="$drive";
+			}
+			break;;
+		case "Linux":
+		case "Darwin":
+			$output=cmdline("df \"$path\"");
+			if($output){
+				$line2=trim($output[1]);
+				$drive=preg_find("/^([^\s\t]*)/",$line2); // first word
+				$drive=basename($drive);
+				$dname=preg_find("/([^\s\t]*)$/",$line2); //  last word
+				$this->info["disk_name"]="$drive: [$dname]";
+				$this->info["disk_drive"]="$drive";
+			}
+			break;;
+		default:
+		}
+		return $this->info;
+	}
+	
 	function uptime(){
 		$uptime = 0;
 
@@ -158,14 +252,14 @@ Class OStools {
 		case "Linux":
 			// Linux machines
 			trace("OSSensor::uptime : Linux method: /usr/bin/uptime");
-			$output = cmdline('/usr/bin/uptime');
-			trace($output);
-			//  18:22  up 9 days, 18:06, 3 users, load averages: 1.78 1.50 1.52
+			$output = cmdline('/usr/bin/uptime -p');
 			if($output){
-				$output=str_replace(Array("up","load"),"|",$output[0]);
-				list($now,$uptime,$rest)=explode("|",$output);
-				$uptime=preg_replace("/([0-9]* users)/", "", $uptime);
-				$uptime=str_replace(",", "", $uptime);
+				$uptime=trim($output[0]);
+				$this->info["uptime"]=$uptime;
+			}
+			$output = cmdline('/usr/bin/uptime -s');
+			if($output){
+				$this->info["lastboot"]=trim($output[0]);
 			}
 			break;;
 		default:
