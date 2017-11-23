@@ -49,7 +49,7 @@ function progress($scope,$message){
 	error_log($errmsg);
 }
 
-function cmdline($text,$folder=false,$cachesecs=30){
+function cmdline($text,$folder=false,$cachesecs=30,$astext=false){
 	if($folder){
 		$path=realpath($folder);
 		if(!$path){
@@ -60,20 +60,24 @@ function cmdline($text,$folder=false,$cachesecs=30){
 	} else {
 		$line=$text;
 	}
-	if($cachesecs>0){
-		$cc=New Cache;
-		$result=$cc->get_arr($line,"bash",$cachesecs);
-		trace("cmdline: [$line] = " . count($result) . " from cache");
-		if($result)	return $result;
-	}
-	$stdout=Array();
-	$result=exec("$line",$stdout);
-	trace("cmdline: [$line] = " . count($stdout) . " lines returned");
+	$cc=New Cache;
+	$stdout=$cc->get_arr($line,"bash",$cachesecs);
 	if($cachesecs>0 AND $stdout){
-		$cc=New Cache;
-		$cc->set_arr($line,"bash",$stdout);
+		trace("cmdline: [$line] = " . count($stdout) . " from cache");
+	} else {
+		$stdout=Array();
+		$result=exec("$line",$stdout);
+		trace("cmdline: [$line] = " . count($stdout) . " lines returned");
+		if($cachesecs>0 AND $stdout){
+			$cc=New Cache;
+			$cc->set_arr($line,"bash",$stdout);
+		}	
 	}
-	return $stdout;
+	if($astext){
+		return implode("\n",$stdout);
+	} else {
+		return $stdout;
+	}
 }
 
 function getparam($name,$default=false){

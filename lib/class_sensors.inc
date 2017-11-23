@@ -13,11 +13,18 @@ Class Sensor{
 		$c =New Cache;
 		$ss=New OStools();
 		$urlparts=Array();
-		$hostname=gethostname();
-		$ipaddress=$c->get("ip","network");
-		if(!$ipaddress){
-			$ipaddress=gethostbyname($hostname);
-			$c->set("ip","network",$ipaddress);
+		if (php_sapi_name() == "cli") {
+			// In cli-mode
+			$hostname=cmdline("hostname",false,3600,true);
+			$ipaddress=cmdline("ifconfig | grep 'inet ' | grep -v 127.0.0.1 | cut -d: -f2 | cut -d' ' -f1 | head -1",false,3600,true);
+		} else {
+			// Not in cli-mode - so through web server
+			$hostname=gethostname();
+			$ipaddress=$c->get("ip","network");
+			if(!$ipaddress){
+				$ipaddress=gethostbyname($hostname);
+				$c->set("ip","network",$ipaddress);
+			}
 		}
 		$system=php_uname();
 		$this->add_namepart($hostname);
@@ -29,6 +36,8 @@ Class Sensor{
 		$this->params["sys_name"]=$hostname;
 		$this->params["sys_address"]=$ipaddress;
 		$this->params["sys_details"]=$system;
+		$this->params["mrtg_options"]="";
+		$this->params["config"]="";
 		}
 
 	function add_namepart($text){
@@ -300,24 +309,23 @@ Class Sensor{
 			// result in seconds
 			$result[$i]=$this->tcpping($address,$port);
 		}
-                if($result){
-                	print_r($results);
+		if($result){
 			$desc="ping time to $address:$port";
 			$min=min($result);
 			$max=max($result);
-                        $this->params["value1"]=(int)($min*1000000);
-                        $this->params["value2"]=(int)($max*1000000);
-                        $this->params["name1"]="MIN $desc";
-                        $this->params["name2"]="MAX $desc";
-                        $this->params["description"]=$desc;
-                        $this->params["mrtg_unit"]="sec";
-                        $this->params["mrtg_options"].=",gauge,nopercent";
-                        $this->params["mrtg_maxbytes"]=4000000;
-                        $this->params["mrtg_kmg"]="u,m,,k,M,G";
-                        return $this->params;
-                } else {
-                        return false;
-                }
+			$this->params["value1"]=(int)($min*1000000);
+			$this->params["value2"]=(int)($max*1000000);
+			$this->params["name1"]="MIN $desc";
+			$this->params["name2"]="MAX $desc";
+			$this->params["description"]=$desc;
+			$this->params["mrtg_unit"]="sec";
+			$this->params["mrtg_options"].=",gauge,nopercent";
+			$this->params["mrtg_maxbytes"]=4000000;
+			$this->params["mrtg_kmg"]="u,m,,k,M,G";
+			return $this->params;
+		} else {
+			return false;
+		}
 	}
 
 	function foldercount($folder,$options){

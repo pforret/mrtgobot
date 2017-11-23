@@ -78,7 +78,7 @@ Class Mrtgobot{
 		foreach($files as $file){
 			$new=$destination . "/" . basename($file);
 			if(file_exists($file) AND !file_exists($new)){
-				trace(__METHOD__."- copy file $file to $htmlroot");
+				trace(__METHOD__."- copy file $file to $destination");
 				copy($file,$new);
 			}
 		}

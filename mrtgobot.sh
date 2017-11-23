@@ -7,16 +7,7 @@ REAL=$(cd $DIR; pwd)
 if [ -f "$REAL/$PROG.php" ] ; then
 	PARAMS=""
 	cd $REAL
-	while [ -n "$1" ] ; do
-		WORD=$1
-		if [ "${WORD}" == "${WORD// /}" ] ; then
-			PARAMS="$PARAMS $1"
-		else
-			PARAMS="$PARAMS \"$1\""
-		fi
-		shift
-	done
-	php "$REAL/$PROG.php" $PARAMS
+	php "$REAL/$PROG.php" $*
 else
 	echo "ERROR: cannot find program [$REAL/$PROG.php]" >&2
 fi
