@@ -160,40 +160,46 @@ case "probe":
 		$params["name1"]="always100";
 		$params["name2"]="always0";
 		$params["mrtg_maxbytes"]=100;
-		$params["cmdline"]="`$prog $action $type`";
+		$params["cmdline"]="`$prog $action $type " . implode(" ",$raw) . "`";
 		$params["config"]="$prog -c $action $type";
 		$params["title"]="Probe Test";
 		$params["mrtg_unit"]="units";
 		$params["mrtg_options"]="gauge,nopercent,nolegend";
-		
-		$s->mrtg_output($params,$withconfig);
 		break;;
 	case "cpu":
 		$s=New Sensor("cpu");
 		$params=$s->cpuusage(true);
-		$s->mrtg_output($params,$withconfig);
 		break;;
 	case "mem":
 		$s=New Sensor("mem");
 		$params=$s->memusage(true);
-		$s->mrtg_output($params,$withconfig);
 		break;;
 	case "disk":
 		$s=New Sensor("disk");
 		$params=$s->diskusage($raw[1]);
-		$s->mrtg_output($params,$withconfig);
 		break;;
 	case "ping":
 		$s=New Sensor("ping");
-		$params=$s->pingtime($raw[1]);
-		$s->mrtg_output($params,$withconfig);
+		if(isset($raw[2])){
+			$params=$s->pingtime($raw[1],$raw[2]);	
+		} else {
+			$params=$s->pingtime($raw[1]);	
+		}
 		break;;
 	default:
 		$s=New Sensor("error");
 		$params["value1"]="probe [$type] not yet supported";
 		$params["value2"]="probe [$type] not yet supported";
-		$s->mrtg_output($params,$withconfig);
 	}
+	if($raw){
+		$params["cmdline"]="`$prog $action " . implode(" ",$raw) . "`";
+		
+	} else {
+		$params["cmdline"]="`$prog $action $type`";
+		
+	}
+	$params["config"]="$prog -c $action $type";
+	$s->mrtg_output($params,$withconfig);
 	
 	break;;
 	

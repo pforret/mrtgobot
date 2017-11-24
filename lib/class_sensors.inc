@@ -36,8 +36,9 @@ Class Sensor{
 		$this->params["sys_name"]=$hostname;
 		$this->params["sys_address"]=$ipaddress;
 		$this->params["sys_details"]=$system;
-		$this->params["mrtg_options"]="";
+		$this->params["mrtg_options"]="growright";
 		$this->params["config"]="";
+		$this->params["title"]="Sensor";
 		}
 
 	function add_namepart($text){
@@ -78,8 +79,8 @@ Class Sensor{
 			echo "#### MRTG CONFIG $name ####\n";
 			echo "#### copy this to your .cfg MRTG config file\n";
 			echo "Target[$name]: $params[cmdline]\n";
-			echo "Title[$name]: $params[title]\n";
-			echo "PageTop[$name]: <h1>$params[title]</h1>\n";
+			echo "Title[$name]: $params[description]\n";
+			echo "PageTop[$name]: <h1>$params[description]</h1>\n";
 			echo "LegendI[$name]: $params[name1]\n";
 			echo "LegendO[$name]: $params[name2]\n";
 			echo "YLegend[$name]: $params[mrtg_unit]\n";
@@ -305,12 +306,17 @@ Class Sensor{
 
 	function pingtime($address,$port=80){
 		if(!$address)	return false;
+		$port=(int)$port;
+		if($port <= 0){
+			$port=80;
+		}
 		for($i=0;$i<4;$i++){
 			// result in seconds
 			$result[$i]=$this->tcpping($address,$port);
 		}
 		if($result){
 			$desc="ping time to $address:$port";
+			$this->add_namepart("$address:$port");
 			$min=min($result);
 			$max=max($result);
 			$this->params["value1"]=(int)($min*1000000);
