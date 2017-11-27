@@ -260,7 +260,7 @@ Class Mrtgobot{
 				$html.="[<a target='theframe' href='$dname/$iname'>$dname</a>] \n";
 			}
 			$html.="</div>\n";
-			$html.="<iframe name='theframe' style='width:100%; height:99%; border:0px' src='$dname/$iname></iframe\n";
+			$html.="<iframe name='theframe' style='width:100%; height:99%; border:0px' src='$dname/$iname'></iframe>\n";
 			$html.="</body>\n";
 			$html.="</html>\n";
 			progress("INDEX","Create parent index for [$pname]");
