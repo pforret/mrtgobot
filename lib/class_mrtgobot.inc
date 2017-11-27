@@ -165,7 +165,7 @@ Class Mrtgobot{
 		// rsync -az /var/www/html/mrtgobot/ cinemapub@dcp.cinemapub.be:apps/monitor/rpmonitor/R-KBXL-601/
 		$this->load_ini();
 		$WorkDirRoot=$this->get_setting("WorkDirRoot");
-		cmdline("/usr/bin/rsync -az \"$WorkDirRoot\" $path",false,0);
+		cmdline("/usr/bin/rsync -az $WorkDirRoot/* $path",false,0);
 	}
 	
 	function indexmaker($profile){

@@ -146,7 +146,7 @@ case "rsync":
 	}
 	$profile=$raw[1];
 	$path=$raw[2];
-	$mg->run_rsync($profile,$path)
+	$mg->run_rsync($profile,$path);
 	break;;
 	
 case "probe":
