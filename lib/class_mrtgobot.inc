@@ -159,40 +159,13 @@ Class Mrtgobot{
 		$lines[]="";
 		progress($cname,"save to [$fcfg]");
 		file_put_contents($fcfg,implode("\r\n",$lines));
-		/*
-		### Global Config Options
+	}
 
-		WorkDir: /volume1/web/mrtg/bfnp_stor02
-		EnableIPv6: no
-		PageTop[^]: <img src="https://core.api.myqnapcloud.com/device_model/52d4ff96f01af85df64bc163" style="float: right; height: 120px" />
-		PageTop[$]: <div class='navbar'><a href='./'>Overview</a></div>
-		Options[_]: growright,nobanner
-		AddHead[_]: <link rel='stylesheet' href='http://whale.cinemapub.be/css/mrtg.css' /><link rel='stylesheet' href='mrtg.css' />
-		WithPeak[_]:ym
-		ShortLegend[_]: B/s
-		YLegend[_]: B/s
-		Legend1[_]: Download
-		Legend2[_]: Upload
-		Legend3[_]: Peak Download
-		Legend4[_]: Peak Upload
-		LegendI[_]: Download
-		LegendO[_]: Upload
-		PNGTitle[_]: BFNP-STOR02
-		#Title: BFNP_STOR02 QNAP BACKUP
-
-
-		Target[bruxsstor02.cpu]: `curl -s "http://10.11.114.15/mrtg_remote_sensor/index.php?key=cpu"`
-		Title[bruxsstor02.cpu]: bfnp-stor02: CPU load (5/15 min)
-		PageTop[bruxsstor02.cpu]: <h1>bfnp-stor02: CPU load (5/15 min)</h1>
-		LegendI[bruxsstor02.cpu]: Avg load over 5 min
-		LegendO[bruxsstor02.cpu]: Avg load over 15 min
-		YLegend[bruxsstor02.cpu]: load
-		PNGTitle[bruxsstor02.cpu]: bruxsstor02.cpu
-		ShortLegend[bruxsstor02.cpu]: load
-		Options[bruxsstor02.cpu]: growright,nobanner,gauge
-		MaxBytes[bruxsstor02.cpu]: 1080
-		kMG[bruxsstor02.cpu]: ,k,M,G,T,P
-		*/
+	function run_rsync($profile,$path){
+		// rsync -az /var/www/html/mrtgobot/ cinemapub@dcp.cinemapub.be:apps/monitor/rpmonitor/R-KBXL-601/
+		$this->load_ini();
+		$WorkDirRoot=$this->get_setting("WorkDirRoot");
+		cmdline("/usr/bin/rsync -az \"$WorkDirRoot\" $path",false,0);
 	}
 	
 	function indexmaker($profile){
