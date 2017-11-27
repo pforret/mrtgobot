@@ -12,6 +12,8 @@ Class Mrtgobot{
 		$this->filecopy["html_root"]=listfiles("config/global");
 		// copy to folder WorkDirRoot/cfgname/ upon creation
 		$this->filecopy["html_work"]=listfiles("config/percfg");
+		$this->hostname=$this->gethostname();
+		$this->hostip=$this->getexternalip();
 	}
 	
 	function init_ini($cfgfolder,$htmlroot){
@@ -129,7 +131,7 @@ Class Mrtgobot{
 		$lines=Array();
 		$lines[]="###### $cname .cfg file - generated on " . date("c");
 		$lines[]="## --- Global options";
-		$lines[]="## Title: $title";
+		$lines[]="## Title: $title @ $this->hostname";
 		$lines[]="WorkDir: $workdir";
 		$lines[]="EnableIPv6: no";
 		$lines[]="";
@@ -184,15 +186,13 @@ Class Mrtgobot{
 			$idxfile="$folder/index.html";
 			$idx2file="$folder/$cfgname.html";
 			$root[$parent][]=$idx2file;
-			$hostname=gethostname();
-			$hostip=$this->getexternalip();
 			$hostdesc=php_uname();
 			$params=Array();
 			$params[]="\"$idxprog\"";
 			$params[]="--nolegend";
 			$params[]="--show=day";
-			$params[]="--width=350"; // images on 50%
-			$params[]="--columns=3";	// all screens can show 1000px
+			$params[]="--width=400"; // images on 50%
+			$params[]="--columns=3";	// all screens can show 1200px
 			if(isset($cfg["blocks"]["_"]["AddHead"])){
 				$params[]="--addhead=\"" . $cfg["blocks"]["_"]["AddHead"] . "\"";
 			}
@@ -206,7 +206,7 @@ Class Mrtgobot{
 			} else {
 				$params[]="--title=MRTGoBot";
 			}
-			$params[]="--subtitle=\"<div class='subtitle'>@ $hostname - $hostip</div>\"";
+			$params[]="--subtitle=\"<div class='subtitle'>@ $this->hostname - $this->hostip</div>\"";
 			$params[]="\"$cfgfile\"";
 			$idxline=implode("  ",$params);
 			$idxline.="> $idxfile";
@@ -224,9 +224,9 @@ Class Mrtgobot{
 			$pname=basename($parent);
 			$pfile="$parent/index.html";
 			$html="<html>\n";
-			$html.="<head><title>$pname overview - MRTGoBot</title></head>\n";
+			$html.="<head><title>$pname overview @ $this->hostname</title></head>\n";
 			$html.="<link rel='stylesheet' href='mrtgobot.css' />\n";
-			$html.="<body><div style='text-align: center; background: #EEE'><strong>MRTGoBot</strong>: \n";
+			$html.="<body><div style='text-align: center; background: #EEE'><strong>MRTGoBot @ $this->hostname</strong>: \n";
 			foreach($kids as $indexfile){
 				$dname=basename(dirname($indexfile));
 				$iname=basename($indexfile);
@@ -335,6 +335,15 @@ Class Mrtgobot{
 		}
 	}
 	
+
+	function gethostname(){
+		if(function_exists("hostname")){
+			return(hostname());
+		} else {
+			return(getenv("HOSTNAME"));
+		}
+	}
+
 	function getexternalip(){
 		$url="http://ipinfo.io/ip";
 		$lines=cmdline("curl -s $url");
