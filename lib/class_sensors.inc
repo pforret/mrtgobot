@@ -74,6 +74,7 @@ Class Sensor{
 		if(!$withconfig){
 			echo $params["config"] . "\n";
 		} else {
+			if(!isset($params["mrtg_unit"]))	$params["mrtg_unit"]="t";
 			$name=$params["mrtg_name"];
 			$name=str_replace("%","p",$name);
 			echo "#### MRTG CONFIG $name ####\n";

@@ -193,11 +193,13 @@ case "probe":
 		}
 		break;;
 	case "uptime":
-		$s=New Sensor("error");
+		$s=New Sensor("uptime");
 		$upsecs=(int)file_get_contents("/proc/uptime");
 		$uphours=round($upsecs/3600);
 		$params["value1"]=min($uphours,24);
+		$params["name1"]="hours since reboot";
                 $params["value2"]=24-$params["value1"];
+                $params["name2"]="reboot time";
 		$params["server"]=gethostname();
 		break;;
 	default:
