@@ -15,7 +15,7 @@ Class Sensor{
 		$urlparts=Array();
 		if (php_sapi_name() == "cli") {
 			// In cli-mode
-			$hostname=cmdline("hostname",false,3600,true);
+			$hostname=gethostname();
 			$ipaddress=cmdline("ifconfig | grep 'inet ' | grep -v 127.0.0.1 | cut -d: -f2 | cut -d' ' -f1 | head -1",false,3600,true);
 		} else {
 			// Not in cli-mode - so through web server

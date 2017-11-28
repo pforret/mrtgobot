@@ -12,8 +12,9 @@ Class Mrtgobot{
 		$this->filecopy["html_root"]=listfiles("config/global");
 		// copy to folder WorkDirRoot/cfgname/ upon creation
 		$this->filecopy["html_work"]=listfiles("config/percfg");
-		$this->hostname=$this->gethostname();
+		$this->hostname=gethostname();
 		$this->hostip=$this->getexternalip();
+		trace("HOSTNAME = [$this->hostname] - IP = [$this->hostip]");
 	}
 	
 	function init_ini($cfgfolder,$htmlroot){
@@ -335,14 +336,6 @@ Class Mrtgobot{
 		}
 	}
 	
-
-	function gethostname(){
-		if(function_exists("hostname")){
-			return(hostname());
-		} else {
-			return(getenv("HOSTNAME"));
-		}
-	}
 
 	function getexternalip(){
 		$url="http://ipinfo.io/ip";

@@ -115,7 +115,7 @@ Class Cache {
 		$group=strtolower(substr($group,0,10));
 		$begin=preg_replace("#[^a-zA-Z0-9]*#","",$id);
 		$begin=substr($begin,0,10);
-		$cacheid="$group.$begin." . substr(sha1($id),0,16);
+		$cacheid="$group.$begin." . substr(sha1($id.get_current_user()),0,10);
 		$cachefile=$this->cachedir . "/$cacheid.tmp";
 		return $cachefile;
 	}

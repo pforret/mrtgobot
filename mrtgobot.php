@@ -192,6 +192,14 @@ case "probe":
 			$params=$s->pingtime($raw[1]);	
 		}
 		break;;
+	case "uptime":
+		$s=New Sensor("error");
+		$upsecs=(int)file_get_contents("/proc/uptime");
+		$uphours=round($upsecs/3600);
+		$params["value1"]=min($uphours,24);
+                $params["value2"]=24-$params["value1"];
+		$params["server"]=gethostname();
+		break;;
 	default:
 		$s=New Sensor("error");
 		$params["value1"]="probe [$type] not yet supported";
