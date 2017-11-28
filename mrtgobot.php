@@ -196,11 +196,17 @@ case "probe":
 		$s=New Sensor("uptime");
 		$upsecs=(int)file_get_contents("/proc/uptime");
 		$uphours=round($upsecs/3600);
+		$params["description"]=gethostname() . ": reboots in last 24 hours";
 		$params["value1"]=min($uphours,24);
 		$params["name1"]="hours since reboot";
                 $params["value2"]=24-$params["value1"];
                 $params["name2"]="reboot time";
 		$params["server"]=gethostname();
+		$params["mrtg_maxbytes"]=100;
+		$params["config"]="$prog -c $action $type";
+		$params["title"]="Probe Test";
+		$params["mrtg_unit"]="hours";
+		$params["mrtg_options"]="gauge,nopercent,nolegend";
 		break;;
 	default:
 		$s=New Sensor("error");
