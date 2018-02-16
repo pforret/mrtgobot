@@ -80,7 +80,7 @@ Class OStools {
 		default:
 			// nothing to do
 		}
-		trace("OSSensor::cpuload : load is " . $result["1min"]);
+		trace("OSSensor::cpuload : load is " . $this->info["cpu_1min"]);
 		trace($this->info);
 		return $this->info;
 	}
