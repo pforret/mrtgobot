@@ -31,7 +31,7 @@ if(isset($options["v"]))	$debug=true;
 $raw=$argv;
 array_shift($raw); // remove program name itself
 $endofopts=false;
-while(!$endofopts){
+while(!$endofopts AND $raw){
 	$vals=array_values($raw);
 	$val1=$vals[0];
 	if(substr($val1,0,1)=="-"){
@@ -92,10 +92,10 @@ case "new":
 	
 case "index":
 	// for each .cfg file, create an index page
-	$profile=$raw[1];
-	if(!$profile){
+	if(!isset($raw[1])){
 		warning($action,"need [folder|file.cfg] as parameter",true);
 	}
+	$profile=$raw[1];
 	if(!file_exists($profile)){
 		warning($action,"profile [$profile] cannot be found",true);
 	}
@@ -104,10 +104,10 @@ case "index":
 	
 case "run":
 	// for each .cfg file, decide if it has to run and run it
-	$profile=$raw[1];
-	if(!$profile){
+	if(!isset($raw[1])){
 		warning($action,"need [folder|file.cfg] as parameter",true);
 	}
+	$profile=$raw[1];
 	if(!file_exists($profile)){
 		warning($action,"profile [$profile] cannot be found",true);
 	}
@@ -236,7 +236,8 @@ function show_usage(){
 	echo "
 ====================================
 ===== MRTGoBot [ACTION] [PARAMS]
-===== (c) 2015 - Peter Forret
+===== Author: Peter Forret <peter@forret.com>
+===== (c) 2015-2018
 
 $prog setup [folder]
 	create base mrtg config and html folders

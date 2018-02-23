@@ -92,12 +92,13 @@ function getparam($name,$default=false){
 }
 
 function preg_find($pattern,$subject){
+	$lsubj=strlen($subject);
 	preg_match($pattern,$subject,$matches);
 	if($matches){
 		trace($matches);
 		return $matches[1];
 	} else {
-		trace("preg_find: $pattern not found");
+		trace("preg_find: [$pattern] not found in $lsubj chars");
 		return false;
 	}
 }
