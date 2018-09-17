@@ -138,7 +138,7 @@ Class Mrtgobot{
 		$lines[]="";
 		$lines[]="PageTop[$]: <div class='navbar'><a href='./'>Overview</a></div>";
 		$ImgURL=$this->get_setting("PageIconURL");
-		$lines[]="PageTop[^]: <img src='$ImgURL' style='float: right; height: 120px' title='MRTGoBot'/>";
+		//$lines[]="PageTop[^]: <img src='$ImgURL' style='float: right; height: 120px' title='MRTGoBot'/>";
 		$lines[]="AddHead[_]: " . $this->get_setting("AddHead","<link rel='stylesheet' href='../mrtgobot.css' />");
 		$lines[]="LegendI[_]: " . $this->get_setting("LegendI","I");
 		$lines[]="LegendO[_]: " . $this->get_setting("LegendO","O");
@@ -188,7 +188,7 @@ Class Mrtgobot{
 			$parent=dirname($folder);
 			$idxfile="$folder/index.html";
 			$idx2file="$folder/$cfgname.html";
-			$root[$parent][]=$idxfile;
+			$root[$parent][]=$idx2file;
 			$hostdesc=php_uname();
 			$params=Array();
 			$params[]="\"$idxprog\"";
@@ -243,6 +243,7 @@ Class Mrtgobot{
 			foreach($kids as $indexfile){
 				$dname=basename(dirname($indexfile));
 				$iname=basename($indexfile);
+				$bname=basename($indexfile,".html");
 				if(file_exists($indexfile)){
 					$html=file_get_contents($indexfile);
 					$head1=stripos($html,"<HEAD>");
@@ -253,13 +254,13 @@ Class Mrtgobot{
 					}
 					if($overview){
 						$title=preg_find("|<title>([^<]*)</title>|i",$html);
-						$overview.="<h2><a target='theframe' href='$dname/$iname'>$dname</a></h2><p><i>$title</i></p>";
+						$overview.="<h2><a target='theframe' href='$dname/$iname'>$bname</a> ($title)</h2>";
 						preg_match_all("|<DIV><B>([^<]*)</B></DIV>|i",$html,$matches);
 						if($matches){
-							$overview.="<nobr>" . implode("</nobr> &bull; <nobr>",$matches[1]) . "</nobr>";
+							$overview.="<small><code><nobr>" . implode("</nobr> &bull; <nobr>",$matches[1]) . "</nobr></code></small>\n";
 						}
 					}
-					$navbar.="[<a target='theframe' href='$dname/$iname'>$dname</a>] \n";	
+					$navbar.="[<a target='theframe' href='$dname/$iname'>$bname</a>] \n";	
 					$lastfound="$dname/$iname";
 				} else {
 					$navbar.="[<i>$dname</i>] \n";	
