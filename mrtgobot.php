@@ -215,10 +215,8 @@ case "probe":
 	}
 	if($raw){
 		$params["cmdline"]="`$prog $action " . implode(" ",$raw) . "`";
-		
 	} else {
 		$params["cmdline"]="`$prog $action $type`";
-		
 	}
 	$params["config"]="$prog -c $action $type";
 	$s->mrtg_output($params,$withconfig);

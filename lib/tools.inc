@@ -95,10 +95,10 @@ function preg_find($pattern,$subject){
 	$lsubj=strlen($subject);
 	preg_match($pattern,$subject,$matches);
 	if($matches){
-		trace($matches);
+		//trace("preg_find: [$pattern] found in $lsubj chars");
 		return $matches[1];
 	} else {
-		trace("preg_find: [$pattern] not found in $lsubj chars");
+		//trace("preg_find: [$pattern] not found in $lsubj chars");
 		return false;
 	}
 }
